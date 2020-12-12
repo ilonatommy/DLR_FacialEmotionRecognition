@@ -1,5 +1,3 @@
-import numpy as np
-
 from ConvolutionalNeuralNetworks import ConvolutionalNeuralNetworks
 from DataLoader import DataLoader
 from ImageHelper import showNumpyImg, NumpyImg2Tensor
@@ -15,19 +13,16 @@ dl = DataLoader("/home/ilona/Data/Dokumenty/Master_Studies/semestr_2/inz_wiedzy_
                 7000)
 images, labels = dl.demo_load()
 
-# model inside cnn should be trained I think - check it in the article and alter accordingly
+# TODO: train the networks, save them on disk and load them instead of default CNN in ConolutionalNeuralNetwork class
 cnn = ConvolutionalNeuralNetworks("ResNet", (IMG_SIZE, IMG_SIZE, 3))
 q = QLearningModel()
 
 verbose = True
 for img in images:
-    img_features = cnn.model.predict(NumpyImg2Tensor(img))
-    m1 = q.get_features_metric(img_features)
-    modified_img = q.selectAction()(img)
-    if verbose:
-        showNumpyImg(modified_img)
-        showNumpyImg(img)
-    modified_img_features = cnn.model.predict(NumpyImg2Tensor(modified_img))
-    m2 = q.get_features_metric(modified_img_features)
-    print(m1)
-    print(m2)
+    no_lr_probabilities_vector = cnn.classifier.predict(NumpyImg2Tensor(img))
+    q.perform_iterative_Q_learning(cnn, img)
+    optimal_action = q.choose_optimal_action()
+    corrected_img = q.apply_action(optimal_action, img)
+    probabilities_vector = cnn.classifier.predict(NumpyImg2Tensor(corrected_img))
+    print("before: ", no_lr_probabilities_vector)
+    print("after: ", probabilities_vector)
