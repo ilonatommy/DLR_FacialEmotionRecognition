@@ -13,7 +13,7 @@ class QLearningModel:
         self.actions = dict([(0, self.action_rotate_plus), (1, self.action_rotate_minus), (2, self.action_invariant)])
         self.states = [0, 1]
         self.tableQ = np.zeros((len(self.states), len(self.actions)))
-        self.maxIter = len(self.actions) * 10
+        self.maxIter = len(self.actions) * 5
 
     def action_rotate_plus(self, picture):
         return rotate(picture, self.angle, reshape=False)
@@ -45,12 +45,12 @@ class QLearningModel:
         )
 
     def perform_iterative_Q_learning(self, cnn, img):
-        img_features = cnn.model.predict(NumpyImg2Tensor(img))
+        img_features = cnn.get_output_base_model(img)
         m1 = self.get_features_metric(img_features)
         for i in range(self.maxIter):
             action = self.selectAction()
             modified_img = self.apply_action(action, img)
-            modified_img_features = cnn.model.predict(NumpyImg2Tensor(modified_img))
+            modified_img_features = cnn.get_output_base_model(modified_img)
             m2 = self.get_features_metric(modified_img_features)
             reward = self.get_reward(m1, m2)
             state = self.define_state(reward)
@@ -58,3 +58,8 @@ class QLearningModel:
 
     def choose_optimal_action(self):
         return np.where(self.tableQ == np.amax(self.tableQ))[1][0]
+
+    def evaluate(self, score, prob, gtLabel):
+        if gtLabel == np.argmax(prob):
+            score += 1
+        return score
