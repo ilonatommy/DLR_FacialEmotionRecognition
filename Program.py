@@ -1,21 +1,29 @@
 from ConvolutionalNeuralNetworks import ConvolutionalNeuralNetworks
 from DataLoader import DataLoader
 from Plotter import *
-from ImageHelper import NumpyImg2Tensor
+from ImageHelper import NumpyImg2Tensor, ShowNumpyImg
 from QLearningModel import QLearningModel
 from sklearn.model_selection import train_test_split
 import time
 
-LOAD_DATA = False
+from StatisticsController import StatisticsController
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, \
+    confusion_matrix
+import numpy as np
+
+# set to true is algorithm is launched for the first time
+LOAD_DATA = True
 TRAIN_NETWORK = False
-LIMIT = 100
+# limit of photos per 1 emotion per 1 person is 10
+LIMIT = 1
+ACTION_NAMES = ['rotate plus', 'rotate minus', 'no change']
+networkName = "ResNet"
 
 # ----------Data Load-----------------
 t1 = time.time()
 IMG_SIZE = 64
 
 classes = {"anger": 0, "disgust": 1, "fear": 2, "joy": 3, "neutral": 4, "sadness": 5, "surprise": 6}
-# limit of photos per 1 emotion per 1 person is 100
 dl = DataLoader("/home/ilona/Data/Dokumenty/Master_Studies/semestr_2/inz_wiedzy_symboliczne_ml/FERG_DB_256",
                 ".png",
                 classes,
@@ -31,38 +39,60 @@ print("Data Load time: " + str(time.time() - t1))
 
 # ---------CNN training---------------
 t2 = time.time()
-cnn = ConvolutionalNeuralNetworks("ResNet", dl.datasetInfo, (IMG_SIZE, IMG_SIZE, 3))
+cnn = ConvolutionalNeuralNetworks(networkName, dl.datasetInfo)
+cnn.create_model_architecture(X_train[0].shape)
+statControllerNoRl = StatisticsController(classes)
 if TRAIN_NETWORK:
-    cnn.history = cnn.model.fit(X_train, dl.toOneHot(y_train), batch_size=20, epochs=400, validation_split=0.2,
-                                callbacks=cnn.callbacks)
-    plot_history(cnn.history.history)
-    dl.save_training_history(cnn.history.history)
+    statControllerNoRl.trainingHistory = cnn.model.fit(X_train, dl.toOneHot(y_train), batch_size=20, epochs=400,
+                                                       validation_split=0.2, callbacks=cnn.callbacks).history
+    dl.save_training_history(statControllerNoRl.trainingHistory)
     dl.save_model(cnn.networkName, cnn.model)
 else:
-    dl.load_model(cnn.networkName)
-    history = dl.load_training_history()
-    plot_history(history)
+    dl.load_model_weights(networkName, cnn.model)
+    statControllerNoRl.trainingHistory = dl.load_training_history()
 print("CNN training time: " + str(time.time() - t2))
-
-# ---------CNN test evaluation--------
-t3 = time.time()
-results = cnn.model.evaluate(X_test, dl.toOneHot(y_test))
-print("test loss, test acc:", results)
-print("CNN evaluate time: " + str(time.time() - t3))
 
 # ----------RL execution--------------
 t4 = time.time()
 q = QLearningModel()
+statControllerRl = StatisticsController(classes, 3)
 verbose = True
-qAcc = 0.0
 for img, label in zip(X_test, y_test):
     no_lr_probabilities_vector = cnn.model.predict(NumpyImg2Tensor(img))
-    q.perform_iterative_Q_learning(cnn, img)
+    statControllerNoRl.predictedLabels.append(np.argmax(no_lr_probabilities_vector))
+
+    q.perform_iterative_Q_learning(cnn, img, statControllerRl)
     optimal_action = q.choose_optimal_action()
+    statControllerRl.updateOptimalActionsStats(optimal_action)
     corrected_img = q.apply_action(optimal_action, img)
+
     probabilities_vector = cnn.model.predict(NumpyImg2Tensor(corrected_img))
-    qAcc = q.evaluate(qAcc, probabilities_vector, label)
-qAcc /= len(y_test)
-print("acc before using RL: ", results[1]) #0.13411764705882354
-print("acc after using RL: ", qAcc) #0.15764705882352942
+    statControllerRl.predictedLabels.append(np.argmax(probabilities_vector))
+
 print("RL execution time: " + str(time.time() - t4))
+print("acc before using RL: ", accuracy_score(y_test, statControllerNoRl.predictedLabels))  # 0.13411764705882354
+print("acc after using RL: ",  accuracy_score(y_test, statControllerRl.predictedLabels))  # 0.15764705882352942
+
+plot_actions_stats(dl, networkName, ACTION_NAMES, statControllerRl.optimalActionsStats, "RL")
+plot_actions_stats(dl, networkName, ACTION_NAMES, statControllerRl.allActionsStats, "NoRL")
+
+conf_matrix_no_RL = confusion_matrix(y_test, statControllerNoRl.predictedLabels)
+conf_matrix_RL = confusion_matrix(y_test, statControllerRl.predictedLabels)
+plot_conf_matrix(dl, networkName, conf_matrix_no_RL, classes, "RL")
+plot_conf_matrix(dl, networkName, conf_matrix_RL, classes, "NoRL")
+plot_history(dl, networkName, statControllerNoRl.trainingHistory)
+
+statControllerNoRl.f1Score = f1_score(y_test, statControllerNoRl.predictedLabels, average="macro")
+statControllerNoRl.precision = precision_score(y_test, statControllerNoRl.predictedLabels, average="macro")
+statControllerNoRl.recall = recall_score(y_test, statControllerNoRl.predictedLabels, average="macro")
+statControllerNoRl.report = classification_report(y_test, statControllerNoRl.predictedLabels)
+
+statControllerRl.f1Score = f1_score(y_test, statControllerRl.predictedLabels, average="macro")
+statControllerRl.precision = precision_score(y_test, statControllerRl.predictedLabels, average="macro")
+statControllerRl.recall = recall_score(y_test, statControllerRl.predictedLabels, average="macro")
+statControllerRl.report = classification_report(y_test, statControllerRl.predictedLabels)
+
+print_classification_details(statControllerNoRl)
+print_classification_details(statControllerRl)
+dl.save_details(statControllerNoRl, networkName, "NoRL")
+dl.save_details(statControllerRl, networkName, "RL")

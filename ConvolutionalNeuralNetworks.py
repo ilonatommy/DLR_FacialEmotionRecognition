@@ -4,13 +4,28 @@ from keras.applications import ResNet50, InceptionV3
 from keras.layers import GlobalAveragePooling2D, Dense, Flatten, Dropout
 from tensorflow.python.keras.callbacks import ModelCheckpoint
 
-from ImageHelper import showNumpyImg, NumpyImg2Tensor
+from ImageHelper import NumpyImg2Tensor
 
 
 class ConvolutionalNeuralNetworks:
-    def __init__(self, networkName, datasetInfo, shape=(64, 64, 3)):
+    def __init__(self, networkName, datasetInfo):
         self.datasetInfo = datasetInfo
         self.networkName = networkName
+        self.model = None
+        self.last_base_layer_idx = 0
+        self.callbacks = [
+            callbacks.EarlyStopping(monitor='val_accuracy', patience=5),
+            ModelCheckpoint('best' + self.networkName + self.datasetInfo + '.hdf5', monitor='val_accuracy')]
+
+    def __get_layer_idx_by_name(self, layerName):
+        index = None
+        for idx, layer in enumerate(self.model.layers):
+            if layer.name == layerName:
+                index = idx
+                break
+        return index
+
+    def create_model_architecture(self, shape=(64, 64, 3)):
         if self.networkName == "ResNet":
             self.model = ResNet50(include_top=False, weights="imagenet", input_shape=shape)
             self.last_base_layer_idx = self.__get_layer_idx_by_name(self.model.layers[-1].name)
@@ -33,18 +48,6 @@ class ConvolutionalNeuralNetworks:
             d2 = Dense(7, 'softmax')(do1)
             self.model = Model(inputs=self.model.input, outputs=d2)
         self.model.compile(loss='categorical_crossentropy', optimizer=optimizers.Adam(), metrics=['accuracy'])
-        self.callbacks = [
-            callbacks.EarlyStopping(monitor='val_acc', patience=5),
-            ModelCheckpoint('best' + self.networkName + self.datasetInfo + '.h5')]
-        self.history = None
-
-    def __get_layer_idx_by_name(self, layerName):
-        index = None
-        for idx, layer in enumerate(self.model.layers):
-            if layer.name == layerName:
-                index = idx
-                break
-        return index
 
     def get_output_base_model(self, img):
         feature_extractor = Model(inputs=self.model.inputs,

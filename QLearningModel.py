@@ -1,7 +1,7 @@
 import numpy as np
 from random import randrange
+
 from scipy.ndimage.interpolation import rotate
-from ImageHelper import showNumpyImg, NumpyImg2Tensor
 
 
 class QLearningModel:
@@ -44,11 +44,12 @@ class QLearningModel:
             reward + self.gamma * max(self.tableQ[state]) - self.tableQ[state][action]
         )
 
-    def perform_iterative_Q_learning(self, cnn, img):
+    def perform_iterative_Q_learning(self, cnn, img, statsController):
         img_features = cnn.get_output_base_model(img)
         m1 = self.get_features_metric(img_features)
         for i in range(self.maxIter):
             action = self.selectAction()
+            statsController.updateAllActionStats(action)
             modified_img = self.apply_action(action, img)
             modified_img_features = cnn.get_output_base_model(modified_img)
             m2 = self.get_features_metric(modified_img_features)
@@ -58,8 +59,3 @@ class QLearningModel:
 
     def choose_optimal_action(self):
         return np.where(self.tableQ == np.amax(self.tableQ))[1][0]
-
-    def evaluate(self, score, prob, gtLabel):
-        if gtLabel == np.argmax(prob):
-            score += 1
-        return score

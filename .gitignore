@@ -1,8 +1,8 @@
 .idea/
-*.npy
 tmp/
-model*/
-*.h5
+models/
+splitDatasets/
+out/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
