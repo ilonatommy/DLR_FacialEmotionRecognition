@@ -13,6 +13,7 @@ class StatisticsController:
         self.precision = None
         self.f1Score = None
         self.report = None
+        self.accuracy = None
 
     def updateOptimalActionsStats(self, action):
         self.optimalActionsStats[action] += 1

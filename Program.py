@@ -5,23 +5,22 @@ from ImageHelper import NumpyImg2Tensor, ShowNumpyImg
 from QLearningModel import QLearningModel
 from sklearn.model_selection import train_test_split
 import time
-
 from StatisticsController import StatisticsController
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report, \
     confusion_matrix
 import numpy as np
 
 # set to true is algorithm is launched for the first time
-LOAD_DATA = True
+LOAD_DATA = False
 TRAIN_NETWORK = False
-# limit of photos per 1 emotion per 1 person is 10
-LIMIT = 1
-ACTION_NAMES = ['rotate plus', 'rotate minus', 'no change']
-networkName = "ResNet"
+# limit of photos per 1 emotion per 1 person is 100
+LIMIT = 10
+ACTION_NAMES = ['rotate +5', 'rotate -5', 'rotate +10', 'rotate -`10', 'no action']
+networkName = "Inception"
 
 # ----------Data Load-----------------
 t1 = time.time()
-IMG_SIZE = 64
+IMG_SIZE = 75
 
 classes = {"anger": 0, "disgust": 1, "fear": 2, "joy": 3, "neutral": 4, "sadness": 5, "surprise": 6}
 dl = DataLoader("/home/ilona/Data/Dokumenty/Master_Studies/semestr_2/inz_wiedzy_symboliczne_ml/FERG_DB_256",
@@ -55,14 +54,18 @@ print("CNN training time: " + str(time.time() - t2))
 # ----------RL execution--------------
 t4 = time.time()
 q = QLearningModel()
-statControllerRl = StatisticsController(classes, 3)
+statControllerRl = StatisticsController(classes, len(ACTION_NAMES))
 verbose = True
 for img, label in zip(X_test, y_test):
     no_lr_probabilities_vector = cnn.model.predict(NumpyImg2Tensor(img))
     statControllerNoRl.predictedLabels.append(np.argmax(no_lr_probabilities_vector))
 
+    """
     q.perform_iterative_Q_learning(cnn, img, statControllerRl)
     optimal_action = q.choose_optimal_action()
+    """
+    optimal_action = q.action_space_search_choose_optimal(cnn, img, statControllerRl)
+
     statControllerRl.updateOptimalActionsStats(optimal_action)
     corrected_img = q.apply_action(optimal_action, img)
 
@@ -70,8 +73,6 @@ for img, label in zip(X_test, y_test):
     statControllerRl.predictedLabels.append(np.argmax(probabilities_vector))
 
 print("RL execution time: " + str(time.time() - t4))
-print("acc before using RL: ", accuracy_score(y_test, statControllerNoRl.predictedLabels))  # 0.13411764705882354
-print("acc after using RL: ",  accuracy_score(y_test, statControllerRl.predictedLabels))  # 0.15764705882352942
 
 plot_actions_stats(dl, networkName, ACTION_NAMES, statControllerRl.optimalActionsStats, "RL")
 plot_actions_stats(dl, networkName, ACTION_NAMES, statControllerRl.allActionsStats, "NoRL")
@@ -86,11 +87,13 @@ statControllerNoRl.f1Score = f1_score(y_test, statControllerNoRl.predictedLabels
 statControllerNoRl.precision = precision_score(y_test, statControllerNoRl.predictedLabels, average="macro")
 statControllerNoRl.recall = recall_score(y_test, statControllerNoRl.predictedLabels, average="macro")
 statControllerNoRl.report = classification_report(y_test, statControllerNoRl.predictedLabels)
+statControllerNoRl.accuracy = accuracy_score(y_test, statControllerNoRl.predictedLabels)
 
 statControllerRl.f1Score = f1_score(y_test, statControllerRl.predictedLabels, average="macro")
 statControllerRl.precision = precision_score(y_test, statControllerRl.predictedLabels, average="macro")
 statControllerRl.recall = recall_score(y_test, statControllerRl.predictedLabels, average="macro")
 statControllerRl.report = classification_report(y_test, statControllerRl.predictedLabels)
+statControllerRl.accuracy = accuracy_score(y_test, statControllerRl.predictedLabels)
 
 print_classification_details(statControllerNoRl)
 print_classification_details(statControllerRl)

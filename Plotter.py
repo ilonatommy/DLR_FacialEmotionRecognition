@@ -47,6 +47,7 @@ def plot_conf_matrix(dataLoader, networkName, conf_matrix, classes, filename):
 
 
 def print_classification_details(statController):
+    print("accuracy: ", statController.accuracy)
     print("precision: ", statController.precision)
     print("recall: ", statController.recall)
     print("F1 score: ", statController.f1Score)

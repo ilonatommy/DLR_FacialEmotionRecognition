@@ -19,7 +19,7 @@ class DataLoader:
         self.img_size = img_size
         self.limit = limit
         self.datasetInfo = '_' + str(self.img_size) + '_limit_' + str(self.limit)
-        self.splitDatasetsDir = 'splitDatasets'
+        self.splitDatasetsDir = 'splitDatasets' + str(img_size)
         self.modelsDir = 'models'
         self.resultsDir = 'out'
 
@@ -80,7 +80,7 @@ class DataLoader:
         print("Saved model to disk")
 
     def load_model_weights(self, networkName, model):
-        model.load_weights(os.path.join(self.modelsDir, 'model' + networkName + self.datasetInfo + '.h5'))
+        model.load_weights(os.path.join(self.modelsDir, 'best' + networkName + self.datasetInfo + '.hdf5'))
 
     def save_details(self, stats, networkName, fileName="RL"):
         with open(os.path.join(self.resultsDir, 'details' + networkName + self.datasetInfo + fileName + ".txt"),
@@ -89,3 +89,4 @@ class DataLoader:
             f.write("precision: " + str(stats.precision) + '\n')
             f.write("F1 score: " + str(stats.f1Score) + '\n')
             f.write("report: " + str(stats.report) + '\n')
+            f.write("accuracy: " + str(stats.accuracy) + '\n')
