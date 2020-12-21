@@ -14,7 +14,7 @@ import numpy as np
 LOAD_DATA = False
 TRAIN_NETWORK = False
 # limit of photos per 1 emotion per 1 person is 100
-LIMIT = 10
+LIMIT = 100
 ACTION_NAMES = ['rotate +5', 'rotate -5', 'rotate +10', 'rotate -`10', 'no action']
 networkName = "Inception"
 
@@ -75,12 +75,12 @@ for img, label in zip(X_test, y_test):
 print("RL execution time: " + str(time.time() - t4))
 
 plot_actions_stats(dl, networkName, ACTION_NAMES, statControllerRl.optimalActionsStats, "RL")
-plot_actions_stats(dl, networkName, ACTION_NAMES, statControllerRl.allActionsStats, "NoRL")
+plot_actions_stats(dl, networkName, ACTION_NAMES, statControllerRl.allActionsStats, "RL")
 
 conf_matrix_no_RL = confusion_matrix(y_test, statControllerNoRl.predictedLabels)
 conf_matrix_RL = confusion_matrix(y_test, statControllerRl.predictedLabels)
-plot_conf_matrix(dl, networkName, conf_matrix_no_RL, classes, "RL")
-plot_conf_matrix(dl, networkName, conf_matrix_RL, classes, "NoRL")
+plot_conf_matrix(dl, networkName, conf_matrix_no_RL, classes, "NoRL")
+plot_conf_matrix(dl, networkName, conf_matrix_RL, classes, "RL")
 plot_history(dl, networkName, statControllerNoRl.trainingHistory)
 
 statControllerNoRl.f1Score = f1_score(y_test, statControllerNoRl.predictedLabels, average="macro")
