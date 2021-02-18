@@ -14,8 +14,8 @@ import numpy as np
 LOAD_DATA = False
 TRAIN_NETWORK = False
 # limit of photos per 1 emotion per 1 person is 100
-LIMIT = 100
-ACTION_NAMES = ['rotate +5', 'rotate -5', 'rotate +10', 'rotate -`10', 'no action']
+LIMIT = 10
+ACTION_NAMES = ['rotate +90', 'rotate +180', 'diagonal translation']
 networkName = "Inception"
 
 # ----------Data Load-----------------
@@ -58,24 +58,47 @@ statControllerRl = StatisticsController(classes, len(ACTION_NAMES))
 verbose = True
 for img, label in zip(X_test, y_test):
     no_lr_probabilities_vector = cnn.model.predict(NumpyImg2Tensor(img))
-    statControllerNoRl.predictedLabels.append(np.argmax(no_lr_probabilities_vector))
+    predictedLabel = np.argmax(no_lr_probabilities_vector)
+    statControllerNoRl.predictedLabels.append(predictedLabel)
 
+    # article version:
     """
+    if predictedLabel != label:
+        q.perform_iterative_Q_learning(cnn, img, statControllerRl)
+        optimal_action = q.choose_optimal_action()
+        statControllerRl.updateOptimalActionsStats(optimal_action)
+        corrected_img = q.apply_action(optimal_action, img)
+
+        probabilities_vector = cnn.model.predict(NumpyImg2Tensor(corrected_img))
+        statControllerRl.predictedLabels.append(np.argmax(probabilities_vector))
+    else:
+        statControllerRl.predictedLabels.append(predictedLabel)
+    """
+
+    # correct testing of article version:
     q.perform_iterative_Q_learning(cnn, img, statControllerRl)
     optimal_action = q.choose_optimal_action()
-    """
-    optimal_action = q.action_space_search_choose_optimal(cnn, img, statControllerRl)
-
     statControllerRl.updateOptimalActionsStats(optimal_action)
     corrected_img = q.apply_action(optimal_action, img)
 
     probabilities_vector = cnn.model.predict(NumpyImg2Tensor(corrected_img))
     statControllerRl.predictedLabels.append(np.argmax(probabilities_vector))
 
+    # best action, no RL version:
+    """
+    #optimal_action = q.action_space_search_choose_optimal(cnn, img, statControllerRl)
+
+    #statControllerRl.updateOptimalActionsStats(optimal_action)
+    #corrected_img = q.apply_action(optimal_action, img)
+
+    #probabilities_vector = cnn.model.predict(NumpyImg2Tensor(corrected_img))
+    #statControllerRl.predictedLabels.append(np.argmax(probabilities_vector))
+    """
+
 print("RL execution time: " + str(time.time() - t4))
 
-plot_actions_stats(dl, networkName, ACTION_NAMES, statControllerRl.optimalActionsStats, "RL")
-plot_actions_stats(dl, networkName, ACTION_NAMES, statControllerRl.allActionsStats, "RL")
+plot_actions_stats(dl, networkName, ACTION_NAMES, statControllerRl.allActionsStats, "allActionsRL")
+plot_actions_stats(dl, networkName, ACTION_NAMES, statControllerRl.optimalActionsStats, "optimalActionsRL")
 
 conf_matrix_no_RL = confusion_matrix(y_test, statControllerNoRl.predictedLabels)
 conf_matrix_RL = confusion_matrix(y_test, statControllerRl.predictedLabels)
@@ -99,3 +122,4 @@ print_classification_details(statControllerNoRl)
 print_classification_details(statControllerRl)
 dl.save_details(statControllerNoRl, networkName, "NoRL")
 dl.save_details(statControllerRl, networkName, "RL")
+

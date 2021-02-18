@@ -9,13 +9,12 @@ class QLearningModel:
     def __init__(self):
         self.alpha = 0.4
         self.gamma = 0.3
-        self.angle1 = 5
-        self.angle2 = -5
+        self.angle1 = 90
+        self.angle2 = 180
         self.angle3 = 10
         self.angle4 = -10
         # executing: self.actions[0](picture)
-        self.actions = dict([(0, self.action_rotate_1), (1, self.action_rotate_2), (2, self.action_rotate_3),
-                             (3, self.action_rotate_4), (4, self.action_invariant)])
+        self.actions = dict([(0, self.action_rotate_1), (1, self.action_rotate_2), (2, self.diagonal_translation)])
         self.states = [0, 1]
         self.tableQ = np.zeros((len(self.states), len(self.actions)))
         self.maxIter = len(self.actions) * 20

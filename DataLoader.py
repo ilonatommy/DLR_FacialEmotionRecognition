@@ -4,11 +4,6 @@ import simplejson
 import numpy as np
 from PIL import Image
 import glob
-from keras.models import load_model
-from keras_applications.resnet50 import ResNet50
-from tensorflow.python.keras.layers import GlobalAveragePooling2D
-from tensorflow.python.keras.models import Model, model_from_json
-from tensorflow.python.layers.core import Dense
 
 
 class DataLoader:
